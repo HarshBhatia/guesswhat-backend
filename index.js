@@ -1,23 +1,28 @@
 const io = require("socket.io")();
+const shortid = require("shortid");
 const GameManager = require("./GameManager");
+const games = {};
 
-const gm = new GameManager(console.log);
+io.on("connection", (client) => {
+  client.on("createGame", (name, options) => {
+    const gameId = shortid.generate();
+    const gm = new GameManager({ id: client.id, name }, options, (state) => {
+      console.log(state);
+      io.emit(gameId, state);
+    });
+    client.emit("gameCreated", gameId);
+    games[gameId] = gm;
+  });
 
-const gid = gm.createGame(
-  { id: "hostid", name: "host" },
-  { roundTime: 10, numberOfRounds: 1 }
-);
-console.log("Created game.");
-gm.joinGame(gid, { name: "harsh", id: "player1" });
-console.log("Harsh joins game.");
-gm.joinGame(gid, { name: "utkarsh", id: "player2" });
-console.log("Utkarsh joins game.");
-gm.startNextRound(gid);
-console.log("Start Round");
+  client.on("joinGame", (gameId, name) => {
+    games[gameId].joinGame({ name, id: client.id });
+  });
 
-// io.on("connection", (client) => {
-// });
+  client.on("startNextRound", (gameId) => {
+    games[gameId].startNextRound();
+  });
+});
 
-// const port = 4001;
-// io.listen(port);
-// console.log("listening on port ", port);
+const port = 4001;
+io.listen(port);
+console.log("listening on port ", port);

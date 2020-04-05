@@ -1,107 +1,96 @@
-const shortid = require("shortid");
-const games = {};
-
 //rounds start from 1
 
 const getRandomWord = () =>
   ["hello", "world", "bye", "whatup"][Math.floor(Math.random() * 3)];
 
-function GameManager(onUpdate) {
-  /**
-   * @param  {String} host - socket id of the host player
-   * @param  {Object} options - {roundTime, numberOfRounds}
-   */
-  const createGame = (host, options) => {
-    const { roundTime, numberOfRounds } = options;
-    const { name, id } = host;
-    const gameId = shortid.generate();
+/**
+ * @param  {String} host - socket id of the host player
+ * @param  {Object} options - {roundTime, numberOfRounds}
+ * @param {Function} onUpdate - game state update listener
+ */
+function GameManager(host, options, onUpdate) {
+  const { roundTime, numberOfRounds } = options;
+  const { name, id } = host;
 
-    games[gameId] = {
-      timeRemaining: roundTime,
-      roundTime,
-      currentRound: 0,
-      numberOfRounds,
-      currentWord: null,
-      canvas: null,
-      turn: id,
-      host: id,
-      players: {
-        [id]: {
-          points: 0,
-          name: name,
-          hasGuessed: false,
-        },
+  const game = {
+    timeRemaining: roundTime,
+    roundTime,
+    currentRound: 0,
+    numberOfRounds,
+    currentWord: null,
+    canvas: null,
+    turn: id,
+    host: id,
+    players: {
+      [id]: {
+        points: 0,
+        name: name,
+        hasGuessed: false,
       },
-    };
-
-    return gameId;
+    },
   };
 
   /**
    * @param  {String} gameId - ID of the game to join
    * @param  {Object} player - {name, id} Name and Socket ID of player
    */
-  const joinGame = (gameId, player) => {
+  const joinGame = (player) => {
     const { name, id } = player;
 
-    if (!games[gameId]) return;
-    games[gameId].players[id] = { points: 0, name, hasGuessed: false };
+    if (!game) return;
+    game.players[id] = { points: 0, name, hasGuessed: false };
 
-    return onUpdate(games);
+    return onUpdate(game);
   };
 
   /**
    * @param  {String} gameId - ID of the game to leave
    * @param  {String} playerId - Socket ID of player
    */
-  const leaveGame = (gameId, playerId) => {
-    if (!games[gameId]) return;
-    delete games[gameId].players[playerId];
+  const leaveGame = (playerId) => {
+    if (!game) return;
+    delete game.players[playerId];
 
-    return onUpdate(games);
+    return onUpdate(game);
   };
 
   /**
    * @param  {String} gameId - ID of game to start next round
    */
-  const startNextRound = (gameId) => {
-    if (!games[gameId]) return;
+  const startNextRound = () => {
+    if (!game) return;
 
     // reset timer
-    games[gameId].timeRemaining = games[gameId].roundTime;
+    game.timeRemaining = game.roundTime;
 
     // increment round number
-    games[gameId].currentRound += 1;
+    game.currentRound += 1;
 
     // get new word
-    games[gameId].currentWord = getRandomWord();
+    game.currentWord = getRandomWord();
 
     // erase canvas
-    games[gameId].canvas = null;
+    game.canvas = null;
 
     // cycle turn
-    // games[gameId].turn = hostId;
+    // game.turn = hostId;
 
-    startRoundTimer(gameId);
+    startRoundTimer();
 
-    return onUpdate(games);
+    return onUpdate(game);
   };
 
-  const startRoundTimer = (gameId) => {
-    const timer = setInterval(
-      function (gameId) {
-        games[gameId].timeRemaining -= 1;
-        onUpdate(games);
-        if (games[gameId].timeRemaining < 1) {
-          clearInterval(timer);
-        }
-      },
-      1000,
-      gameId
-    );
+  const startRoundTimer = () => {
+    const timer = setInterval(function () {
+      game.timeRemaining -= 1;
+      onUpdate(game);
+      if (game.timeRemaining < 1) {
+        clearInterval(timer);
+      }
+    }, 1000);
   };
 
-  return { createGame, joinGame, leaveGame, startNextRound };
+  return { joinGame, leaveGame, startNextRound };
 }
 
 module.exports = GameManager;
