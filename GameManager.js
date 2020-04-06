@@ -21,6 +21,7 @@ function GameManager(host, options, onUpdate) {
     canvas: null,
     turn: id,
     host: id,
+    guesses: [],
     players: {
       [id]: {
         points: 0,
@@ -90,7 +91,24 @@ function GameManager(host, options, onUpdate) {
     }, 1000);
   };
 
-  return { joinGame, leaveGame, startNextRound };
+  const takeGuess = (playerId, guessValue) => {
+    const playerName =
+      (game.players[playerId] && game.players[playerId].name) || "Someone";
+    game.guesses.push({
+      user: { id: playerId, name: playerName },
+      value: guessValue,
+    });
+    return onUpdate(game);
+  };
+
+  const removePlayer = (playerId) => {
+    delete game.players[playerId];
+
+    //TODO handle if host and if turn
+    return onUpdate(game);
+  };
+
+  return { joinGame, leaveGame, startNextRound, takeGuess, removePlayer };
 }
 
 module.exports = GameManager;
