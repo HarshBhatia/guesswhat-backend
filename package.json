@@ -10,6 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "shortid": "^2.2.15",
-    "socket.io": "^2.3.0"
+    "socket.io": "^2.4.0"
   }
 }
